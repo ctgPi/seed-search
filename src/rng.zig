@@ -18,7 +18,7 @@ pub export fn rng_call(L: *LuaState) callconv(.C) c_int {
     L.at(1).field("y").setNumber(u32, y);
     L.at(1).field("z").setNumber(u32, z);
 
-    var r: f64 = switch (L.getTop()) {
+    var r: f64 = switch (L.getStackTop()) {
         1 => t,
         2 => blk: {
             const hi = floor(L.at(2).getNumber(f64));

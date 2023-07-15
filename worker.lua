@@ -1,6 +1,7 @@
 #!/usr/bin/env lua5.2
 
 local zip = require('zip')
+local env = require('env');
 
 serpent = {}
 serpent.block = function () return "" end
@@ -472,18 +473,18 @@ if os.getenv('FACTORIO_HOME') ~= nil then
     FACTORIO_HOME = os.getenv('FACTORIO_HOME')
 else
     -- Windows
-    FACTORIO_HOME = os.getenv('APPDATA') .. PATH_SEPARATOR .. "Factorio"
+    FACTORIO_HOME = env.join_path(os.getenv('APPDATA'), "Factorio")
     -- Linux
-    -- FACTORIO_HOME = os.getenv('HOME') .. PATH_SEPARATOR .. ".factorio"
+    -- FACTORIO_HOME = env.join_path(os.getenv('HOME'), ".factorio")
     -- MacOS
-    -- FACTORIO_HOME = os.getenv('HOME') .. PATH_SEPARATOR .. "Library" .. PATH_SEPARATOR .. "Application Support" .. PATH_SEPARATOR .. "factorio"
+    -- FACTORIO_HOME = env.join_path(os.getenv('HOME'), "Library", "Application Support", "factorio")
 end
 local MOD_NAME = 'space-exploration'
 local MOD_VERSION = '0.6.108'
 local MOD_TAG = MOD_NAME .. '_' .. MOD_VERSION
 
 do
-    local archive = FACTORIO_HOME .. PATH_SEPARATOR .. "mods" .. PATH_SEPARATOR .. MOD_TAG .. ".zip"
+    local archive = env.join_path(FACTORIO_HOME, "mods", MOD_TAG .. ".zip")
 
     local function load_from_zip(path)
         local data = zip.extract(archive, MOD_TAG .. '/' .. path)
@@ -639,6 +640,7 @@ local function check_seed(seed)
         report_file:write(string.format('E[%11s] (%5.2f) ', best.E.name, best.E.score))
         report_file:write(string.format('A[%11s] (%5.2f) ', best.A.name, best.A.score))
         report_file:write(string.format('M[%11s] (%5.2f)\n', best.M.name, best.M.score))
+        report_file:flush()
     end
 end
 
@@ -648,16 +650,15 @@ local chunk_size = math.pow(2, 16)
 local start_seed = math.max(340, chunk * chunk_size)
 local end_seed = start_seed + chunk_size - 2
 
-hint_file_name = string.format('output/report-%04x.hint', chunk)
-report_file_name = string.format('output/report-%04x.txt', chunk)
+hint_file_name = env.join_path('output', string.format('report-%04x.hint', chunk))
+report_file_name = env.join_path('output', string.format('report-%04x.txt', chunk))
 
-if os.execute('test -e ' .. hint_file_name) then
+if env.file_exists(hint_file_name) then
     hint_file = io.open(hint_file_name, 'r')
     assert(hint_file)
 
     report_file = io.open(report_file_name .. '.tmp', 'w+')
     assert(report_file)
-    report_file:setvbuf('line')
 
     for seed in hint_file:lines("*n") do
         check_seed(seed)
@@ -669,13 +670,12 @@ if os.execute('test -e ' .. hint_file_name) then
     hint_file:close()
     os.remove(hint_file_name)
 else
-    if os.execute('test -e ' .. report_file_name) then
+    if env.file_exists(report_file_name) then
         return
     end
 
     report_file = io.open(report_file_name .. '.tmp', 'w+')
     assert(report_file)
-    report_file:setvbuf('line')
 
     for seed = start_seed, end_seed, 2 do
         check_seed(seed)
