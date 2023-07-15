@@ -20,8 +20,8 @@ while #queue > 0 or #active > 0 do
     local signaled_handle = env.wait_for_process(handle);
     if signaled_handle ~= nil then
         local index
-        for i, _ in ipairs(processes) do
-            if processes[i] == signaled_handle then
+        for i, _ in ipairs(handle) do
+            if handle[i] == signaled_handle then
                 index = i
                 break
             end
