@@ -28,7 +28,7 @@ function FactorioRNG:new(o)
 end
 
 local rng = require('rng')
-FactorioRNG.__call = rng.rng_call
+FactorioRNG.__call = rng.call
 
 mod_prefix = "se-"
 game = {}
@@ -465,19 +465,29 @@ settings.global["robot-attrition-factor"] = { value = 1 }  -- FIXME
 settings.startup = {}
 settings.startup["se-spawn-small-resources"] = { value = false }  -- FIXME
 
-local FACTORIO_HOME = '/home/fabio/factorio/1.1.80/'
-local SE_VERSION = '0.6.108'
+local PATH_SEPARATOR = package.config:sub(1, 1)
+-- local FACTORIO_HOME = '/home/fabio/factorio/1.1.80'
+local FACTORIO_HOME
+if os.getenv('FACTORIO_HOME') ~= nil then
+    FACTORIO_HOME = os.getenv('FACTORIO_HOME')
+else
+    -- Windows
+    FACTORIO_HOME = os.getenv('APPDATA') .. PATH_SEPARATOR .. "Factorio"
+    -- Linux
+    -- FACTORIO_HOME = os.getenv('HOME') .. PATH_SEPARATOR .. ".factorio"
+    -- MacOS
+    -- FACTORIO_HOME = os.getenv('HOME') .. PATH_SEPARATOR .. "Library" .. PATH_SEPARATOR .. "Application Support" .. PATH_SEPARATOR .. "factorio"
+end
+local MOD_NAME = 'space-exploration'
+local MOD_VERSION = '0.6.108'
+local MOD_TAG = MOD_NAME .. '_' .. MOD_VERSION
 
 do
-    local se_mod = zip.open(FACTORIO_HOME .. 'mods/space-exploration_' .. SE_VERSION .. '.zip')
-    assert(se_mod)
+    local archive = FACTORIO_HOME .. PATH_SEPARATOR .. "mods" .. PATH_SEPARATOR .. MOD_TAG .. ".zip"
 
     local function load_from_zip(path)
-        local file = se_mod:open('space-exploration_' .. SE_VERSION .. '/' .. path)
-        assert(file)
-        local data = file:read('*a')
-        file:close()
-        return load(data)()
+        local data = zip.extract(archive, MOD_TAG .. '/' .. path)
+        return load(data, '__' .. MOD_NAME .. '__/' .. path)()
     end
 
     package.loaded['__space-exploration__/shared_util'] = load_from_zip('shared_util.lua')

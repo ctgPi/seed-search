@@ -10,7 +10,9 @@ pub extern fn lua_gettable(L: *LuaState, idx: c_int) void;
 pub extern fn lua_settable(L: *LuaState, idx: c_int) void;
 pub extern fn lua_checkstack(L: *LuaState, sz: c_int) c_int;
 pub extern fn lua_tonumberx(L: *LuaState, idx: c_int, isnum: *c_int) LuaNumber;
+pub extern fn lua_tolstring(L: *LuaState, idx: c_int, len: *usize) [*]const u8;
 pub extern fn lua_error(L: *LuaState) noreturn;
+pub extern fn lua_concat(L: *LuaState, n: c_int) void;
 pub extern fn lua_pushnumber(L: *LuaState, n: LuaNumber) void;
 pub extern fn lua_pushlstring(L: *LuaState, s: [*]const u8, len: usize) [*]const u8;
 pub extern fn lua_createtable(L: *LuaState, narr: c_int, nrec: c_int) void;
@@ -19,9 +21,9 @@ pub const luaL_Reg = extern struct {
     name: [*c]const u8,
     func: lua_CFunction,
 
-    pub const SENTINEL = luaL_Reg { .name = null, .func = null };
+    pub const SENTINEL = luaL_Reg{ .name = null, .func = null };
 };
-pub extern fn luaL_setfuncs(L: *LuaState, l: [*c]const luaL_Reg, nup: c_int) void;
+pub extern fn luaL_setfuncs(L: *LuaState, l: [*:luaL_Reg.SENTINEL]const luaL_Reg, nup: c_int) void;
 
 pub const LuaState = opaque {
     pub inline fn _checkstack(self: *LuaState, extra: c_int) c_int {
@@ -52,14 +54,25 @@ pub const LuaState = opaque {
         lua_createtable(self, narr, nrec);
     }
 
-    pub inline fn _tonumberx(L: *LuaState, idx: c_int, isnum: [*c]c_int) LuaNumber {
+    pub inline fn _tonumberx(L: *LuaState, idx: c_int, isnum: *c_int) LuaNumber {
         return lua_tonumberx(L, idx, isnum);
     }
 
-    pub inline fn _L_setfuncs(self: *LuaState, l: [*c]const luaL_Reg, nup: c_int) void {
-        luaL_setfuncs(self, l, nup);
+    pub inline fn _tolstring(L: *LuaState, idx: c_int, len: *usize) ?[*]const u8 {
+        return lua_tolstring(L, idx, len);
     }
 
+    pub inline fn _concat(L: *LuaState, n: c_int) void {
+        lua_concat(L, n);
+    }
+
+    pub inline fn _error(L: *LuaState) noreturn {
+        lua_error(L);
+    }
+
+    pub inline fn _L_setfuncs(self: *LuaState, l: [*:luaL_Reg.SENTINEL]const luaL_Reg, nup: c_int) void {
+        luaL_setfuncs(self, l, nup);
+    }
 
     pub inline fn checkStack(self: *LuaState, size: usize) void {
         assert(self._checkstack(@intCast(size)) != 0);
@@ -88,13 +101,13 @@ pub const LuaState = opaque {
 
     pub inline fn setTop(self: *LuaState, index: anytype) void {
         if (index < 0) self.checkIndex(index);
-        
+
         self._settop(@intCast(index));
     }
 
     pub inline fn fromLuaNumber(_: *const LuaState, comptime T: type, value: LuaNumber) T {
-        return switch(@typeInfo(LuaNumber)) {
-            .Int => @compileError("integer types for LuaNumber are not implemented"),  // TODO
+        return switch (@typeInfo(LuaNumber)) {
+            .Int => @compileError("integer types for LuaNumber are not implemented"), // TODO
             .Float => switch (@typeInfo(T)) {
                 .Int => @intFromFloat(value),
                 .Float => @floatCast(value),
@@ -105,8 +118,8 @@ pub const LuaState = opaque {
     }
 
     pub inline fn toLuaNumber(_: *const LuaState, comptime T: type, value: T) LuaNumber {
-        return switch(@typeInfo(LuaNumber)) {
-            .Int => @compileError("integer types for LuaNumber are not implemented"),  // TODO
+        return switch (@typeInfo(LuaNumber)) {
+            .Int => @compileError("integer types for LuaNumber are not implemented"), // TODO
             .Float => switch (@typeInfo(T)) {
                 .Int => @floatFromInt(value),
                 .Float => @floatCast(value),
@@ -138,6 +151,16 @@ pub const LuaState = opaque {
         const value = self.getNumber(T, -1);
         self._settop(-2);
         return value;
+    }
+
+    pub inline fn getString(self: *LuaState, index: anytype) []const u8 {
+        self.checkIndex(index);
+
+        var len: usize = undefined;
+        const ptr = self._tolstring(@intCast(index), &len);
+        assert(ptr != null);
+
+        return ptr.?[0..len];
     }
 
     pub inline fn pushString(self: *LuaState, s: []const u8) void {

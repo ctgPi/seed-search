@@ -2,3 +2,6 @@ cartouche.html
 libav.so
 space-exploration_*/
 output/
+*.dll.obj
+*.pdb
+*.lib
