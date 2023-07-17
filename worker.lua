@@ -466,18 +466,19 @@ settings.global["robot-attrition-factor"] = { value = 1 }  -- FIXME
 settings.startup = {}
 settings.startup["se-spawn-small-resources"] = { value = false }  -- FIXME
 
-local PATH_SEPARATOR = package.config:sub(1, 1)
--- local FACTORIO_HOME = '/home/fabio/factorio/1.1.80'
 local FACTORIO_HOME
 if os.getenv('FACTORIO_HOME') ~= nil then
     FACTORIO_HOME = os.getenv('FACTORIO_HOME')
 else
-    -- Windows
-    FACTORIO_HOME = env.join_path(os.getenv('APPDATA'), "Factorio")
-    -- Linux
-    -- FACTORIO_HOME = env.join_path(os.getenv('HOME'), ".factorio")
-    -- MacOS
-    -- FACTORIO_HOME = env.join_path(os.getenv('HOME'), "Library", "Application Support", "factorio")
+    if env.operating_system() == "win32" then
+        FACTORIO_HOME = env.join_path(os.getenv('APPDATA'), "Factorio")
+    elseif env.operating_system() == "linux" then
+        FACTORIO_HOME = env.join_path(os.getenv('HOME'), ".factorio")
+    elseif env.operating_system() == "macos" then
+        FACTORIO_HOME = env.join_path(os.getenv('HOME'), "Library", "Application Support", "factorio")
+    else
+        error("unknown operating system: " .. env.operating_system())
+    end
 end
 local MOD_NAME = 'space-exploration'
 local MOD_VERSION = '0.6.108'
@@ -522,15 +523,26 @@ local function check_seed(seed)
         end
     end
 
-    local best = { B = { score = 0 }, E = { score = 0 }, A = { score = 0 }, M = { score = 0 } }
+    local asteroid_fields = {}
+    for _, zone in pairs(global.zones_by_name) do
+        if zone.type == "asteroid-field" then
+            table.insert(asteroid_fields, zone)
+        end
+    end
+
+    local best = { B = { score = 0 }, E = { score = 0 }, A = { score = 0 }, M = { score = 0 }, D = { score = 0 } }
     for _, body in pairs(celestial_bodies) do
         -- We don't want waterless bodies.
         if body.tags.water ~= "water_none" then
             local score = {}
             for _, resource in pairs({"coal","copper-ore", "crude-oil", "iron-ore", "se-beryllium-ore", "se-cryonite", "se-holmium-ore", "se-iridium-ore", "se-methane-ice", "se-naquium-ore", "se-vitamelange", "se-vulcanite", "se-water-ice", "stone", "uranium-ore"}) do
                 local control = body.controls[resource]
-                -- We prioritize patch frequency, for easier logistics.
-                score[resource] = math.pow(control.frequency, 2) * control.richness * control.size
+                -- Prioritize frequency for better logistics.
+                frequency_weight = 4
+                richness_weight = 1
+                size_weight = 1
+                total_weight = frequency_weight + richness_weight + size_weight
+                score[resource] = math.pow(math.pow(control.frequency, frequency_weight) * math.pow(control.richness, richness_weight) * math.pow(control.size, size_weight), 3.0 / total_weight)
             end
 
             -- TODO: oil is weird; what is the correct scaling factor here?
@@ -629,17 +641,51 @@ local function check_seed(seed)
         end
     end
 
+    for _, field in pairs(asteroid_fields) do
+        local delta_v = Zone.get_travel_delta_v(nauvis, field)
+        if delta_v <= 20000 then
+            local base_score = math.pow((6E2) / (1E4 + delta_v), 1.0)
+            local secondary_exponent = 0.5
+            if field.primary_resource == "se-naquium-ore" then
+                local score = {}
+                for _, resource in pairs({"coal","copper-ore", "crude-oil", "iron-ore", "se-beryllium-ore", "se-cryonite", "se-holmium-ore", "se-iridium-ore", "se-methane-ice", "se-naquium-ore", "se-vitamelange", "se-vulcanite", "se-water-ice", "stone", "uranium-ore"}) do
+                    local control = field.controls[resource]
+                    -- Prioritize frequency for better logistics.
+                    frequency_weight = 4
+                    richness_weight = 1
+                    size_weight = 1
+                    total_weight = frequency_weight + richness_weight + size_weight
+                    score[resource] = math.pow(math.pow(control.frequency, frequency_weight) * math.pow(control.richness, richness_weight) * math.pow(control.size, size_weight), 3.0 / total_weight)
+                end
+
+                local D_score = score["se-naquium-ore"]
+                D_score = math.min(D_score, math.pow(1000 / 333, secondary_exponent) * score["se-methane-ice"])
+                D_score = math.min(D_score, math.pow(1000 /  87, secondary_exponent) * score["se-water-ice"])
+                D_score = math.min(D_score, math.pow(1000 /  40, secondary_exponent) * score["iron-ore"])
+                -- 1 T4 pack = 444 naq (at T0 prod)
+                D_score = base_score * D_score / 0.444
+                if D_score > best.D.score then
+                    best.D.score = D_score
+                    best.D.name = field.name
+                    best.D.delta_v = delta_v
+                end
+            end
+        end
+    end
+
     local score_exponent = -4.0
-    local final_score = math.pow(0.25 * (
+    local final_score = math.pow(0.2 * (
         math.pow(best.B.score, score_exponent) + math.pow(best.E.score, score_exponent) +
-        math.pow(best.A.score, score_exponent) + math.pow(best.M.score, score_exponent)), 1.0 / score_exponent)
+        math.pow(best.A.score, score_exponent) + math.pow(best.M.score, score_exponent) +
+        math.pow(best.D.score, score_exponent)), 1.0 / score_exponent)
 
     if final_score > 0.0 then
         report_file:write(string.format('%10d %7.4f ', seed, final_score))
-        report_file:write(string.format('B[%11s] (%5.2f) ', best.B.name, best.B.score))
-        report_file:write(string.format('E[%11s] (%5.2f) ', best.E.name, best.E.score))
-        report_file:write(string.format('A[%11s] (%5.2f) ', best.A.name, best.A.score))
-        report_file:write(string.format('M[%11s] (%5.2f)\n', best.M.name, best.M.score))
+        report_file:write(string.format('B[%11s] (%4.2f) ', best.B.name, best.B.score))
+        report_file:write(string.format('E[%11s] (%4.2f) ', best.E.name, best.E.score))
+        report_file:write(string.format('A[%11s] (%4.2f) ', best.A.name, best.A.score))
+        report_file:write(string.format('M[%11s] (%4.2f) ', best.M.name, best.M.score))
+        report_file:write(string.format('D[%16s] (%4.2f) {v7}\n', best.D.name, best.D.score))
         report_file:flush()
     end
 end
