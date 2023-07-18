@@ -9,6 +9,13 @@ const lua = @import("./lua.zig");
 const LuaState = lua.LuaState;
 const luaL_Reg = lua.luaL_Reg;
 
+pub export fn env_operating_system(L: *LuaState) callconv(.C) c_int {
+    L.checkStack(1);
+    L.pushString("win32");
+
+    return 1;
+}
+
 pub export fn env_create_directory(L: *LuaState) callconv(.C) c_int {
     const path = L.getString(1);
 
@@ -140,6 +147,10 @@ pub export fn env_get_process_exit_code(L: *LuaState) callconv(.C) c_int {
 }
 
 pub const env = [_:luaL_Reg.SENTINEL]luaL_Reg{
+    luaL_Reg{
+        .name = "operating_system",
+        .func = &env_operating_system,
+    },
     luaL_Reg{
         .name = "create_directory",
         .func = &env_create_directory,
