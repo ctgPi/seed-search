@@ -4,7 +4,7 @@
 
     run.bat
 
-Reach out to @ctgPi in the SE Discord so you can be assigned a range of chunks
+Reach out to @ctgPi in the [SE Discord](https://discord.gg/GDvxHgXjkk) so you can be assigned a range of chunks
 to work on.
 
 # Design rationale
