@@ -1,0 +1,16 @@
+0x0 (homeworld)
+0x1	coal	200	200	200
+0x2	stone	200	177	123
+0x3	iron-ore	143	181	200
+0x4	copper-ore	204	98	54
+0x5	crude-oil	200	52	198
+0x6	uranium-ore	0	200	0
+0x7	se-vulcanite	224	40	10
+0x8	se-cryonite	35	164	255
+0x9	se-vitamelange	173	206	54
+0xA	se-holmium-ore	200	142	161
+0xB se-beryllium-ore	144	222	184
+0xC se-iridium-ore	244	202	85
+0xD se-water-ice	198	241	245
+0xE se-methane-ice	245	231	198
+0xF se-naquium-ore	137	113	214

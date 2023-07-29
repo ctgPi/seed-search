@@ -1,6 +1,7 @@
 cartouche.html
 space-exploration_*/
 output/
+mods/*.zip
 *.dll.obj
 *.pdb
 *.lib

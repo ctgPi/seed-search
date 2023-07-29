@@ -107,3 +107,12 @@ Caveats:
   overvalues D as a result. Does anybody have numbers on the PUBEAMD packs
   consumed and/or a tentative research queue so that can be estimated and
   reweighted accordingly?
+
+# Packed format rationale
+
+    -rw-rw-r-- 1 fabio fabio   415526  7月 29 21:30 seeds.bin
+    -rw-rw-r-- 1 fabio fabio   410171  7月 29 21:30 seeds.bin.gz
+    -rw-rw-r-- 1 fabio fabio 13659435  7月 29 21:39 seeds.jsonl
+    -rw-rw-r-- 1 fabio fabio  3073226  7月 29 21:39 seeds.jsonl.gz
+
+~400 bytes per seed vs. 3000 bytes gzipped JSONL

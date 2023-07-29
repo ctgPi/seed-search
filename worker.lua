@@ -1,7 +1,7 @@
 #!/usr/bin/env lua5.2
 
 local zip = require('zip')
-local env = require('env');
+local env = require('env')
 
 serpent = {}
 serpent.block = function () return "" end
@@ -530,162 +530,176 @@ local function check_seed(seed)
         end
     end
 
-    local best = { B = { score = 0 }, E = { score = 0 }, A = { score = 0 }, M = { score = 0 }, D = { score = 0 } }
+    local stars = {}
+    for _, zone in pairs(global.zones_by_name) do
+        if zone.type == "star" then
+            table.insert(stars, zone)
+        end
+    end
+
+    local resources = {"coal","copper-ore", "crude-oil", "iron-ore", "se-beryllium-ore", "se-cryonite", "se-holmium-ore", "se-iridium-ore", "se-methane-ice", "se-naquium-ore", "se-vitamelange", "se-vulcanite", "se-water-ice", "stone", "uranium-ore"}
+    local best = { P = { score = 0 }, U = { score = 0 }, B = { score = 0 }, E = { score = 0 }, A = { score = 0 }, M = { score = 0 }, D = { score = 0 } }
     for _, body in pairs(celestial_bodies) do
-        -- We don't want waterless bodies.
-        if body.tags.water ~= "water_none" then
-            local score = {}
-            for _, resource in pairs({"coal","copper-ore", "crude-oil", "iron-ore", "se-beryllium-ore", "se-cryonite", "se-holmium-ore", "se-iridium-ore", "se-methane-ice", "se-naquium-ore", "se-vitamelange", "se-vulcanite", "se-water-ice", "stone", "uranium-ore"}) do
-                local control = body.controls[resource]
-                -- Prioritize frequency for better logistics.
-                frequency_weight = 4
-                richness_weight = 1
-                size_weight = 1
-                total_weight = frequency_weight + richness_weight + size_weight
-                score[resource] = math.pow(math.pow(control.frequency, frequency_weight) * math.pow(control.richness, richness_weight) * math.pow(control.size, size_weight), 3.0 / total_weight)
-            end
+        local score = {}
+        for _, resource in pairs(resources) do
+            local control = body.controls[resource]
+            score[resource] = control.frequency * control.richness * control.size
+        end
+        local primary_score = score[body.primary_resource]
+        for _, resource in pairs(resources) do
+            score[resource] = score[resource] / primary_score
+        end
 
-            -- TODO: oil is weird; what is the correct scaling factor here?
-            --       eyeballing the FP plans seems like only half the oil is consumed
-            --       on land, but maybe we can live with less because it's infinite?
-            score["crude-oil"] = score["crude-oil"] * 2
+        -- TODO: oil is weird; what is the correct scaling factor here?
+        score["crude-oil"] = score["crude-oil"] * 1.0
 
-            -- We calculate the cost of each T4 science pack, assuming:
-            --   * no prod modules;
-            --   * using ingots/pyroflux/good recipes for heatshielding/LDS/etc.
-            -- 
-            -- B: 1538  vita +  253  vulc +   19  cryo +  930   oil +   6  coal
-            --  +  248 stone +    8  iron +    5  copp +    8  uran + 34k water
-            --
-            -- E:  857  holm +  126  vulc +  451  cryo + 1899   oil +  39  coal
-            --  -  146 stone +   16  iron +   49  copp +    4  uran +  5k water
-            --
-            -- A:  998 beryl +  124  vulc +  208  cryo +  842   oil +   8  coal
-            --  -   23 stone +   26  iron +    6  copp +    0  uran +  2k water
-            --
-            -- M:  733  irid +  437  vulc +   15  cryo + 1527   oil +  22  coal
-            --  -   68 stone +   17  iron +    2  copp +    4  uran +  5k water
-            --
-            -- D:  443   naq +  443  vita +  219  holm +  216  irid + 156 beryl (+ ...)
-            --
-            -- (plus secondary amounts of the other resorces, but only one BEAM resource
-            --  can spawn in the same surface)
-            -- 
-            --   * B requires vita core fragments directly, consumes the most ore per
-            --     pack of the 4 sciences, and are also consumed by deep space packs.
-            --     Additionally, they require grassy terrain, which conflicts with
-            --     vulc/cryo: let's assign it as a primary resource. To maximize patch
-            --     spawn rates, we also require it to have a mild climate.
-            --
-            --   * E needs blue beads, which stack poorly and are best manufactured
-            --     locally; we choose a cryonite-primary planet that does double-duty
-            --     providing cryonite rods and holmium ingots. We also make sure that
-            --     the planet is frozen.
-            --
-            --   * A??
-            --
-            --   * M needs red beads; for similar reasons as E we want it in a vulc
-            --     planet with a volcanic biome.
+        local delta_v = Zone.get_travel_delta_v(nauvis, body)
+        local radius_score = 1.0 + 0.0 * math.pow(1 - math.abs((math.log(body.radius) - math.log(2000)) / math.log(5)), 0.5)
+        local base_score = 7.0 * radius_score
 
-            local delta_v = Zone.get_travel_delta_v(nauvis, body)
-            local scaled_radius = body.radius * 0.5E-3
-            local base_score = math.min(1.0, scaled_radius) --* math.pow((2E3) / (1E3 + delta_v), 0.5)
-            local secondary_exponent = 0.5
+        local water_level
+        if body.tags.water == "water_none" then
+            if body.primary_resource ~= "se-vulcanite" then
+                base_score = base_score * 0.0
+            else
+                base_score = base_score * 1.0
+            end
+            water_level = ' '
+        elseif body.tags.water == "water_low" then
+            base_score = base_score * 1.0
+            water_level = '▘'
+        elseif body.tags.water == "water_med" then
+            base_score = base_score * 1.0
+            water_level = '▚'
+        elseif body.tags.water == "water_high" then
+            base_score = base_score * 0.0
+            water_level = '▛'
+        elseif body.tags.water == "water_max" then
+            base_score = base_score * 0.0
+            water_level = '█'
+        end
 
-            if body.primary_resource == "se-vitamelange" and body.tags.temperature == "temperature_bland" then
-                local B_score = score["se-vitamelange"]
-                B_score = math.min(B_score, math.pow(1538 /  248, secondary_exponent) * score["stone"])
-                B_score = math.min(B_score, math.pow(1538 /  930, secondary_exponent) * score["crude-oil"])
-                B_score = base_score * B_score / 1.538
-                if B_score > best.B.score then
-                    best.B.score = B_score
-                    best.B.name = body.name
-                    best.B.delta_v = delta_v
-                end
+        if body.primary_resource == "se-vulcanite" and body.tags.temperature == "temperature_volcanic" then
+            local P_score = base_score * score["crude-oil"]
+            if P_score > best.P.score then
+                best.P.score = P_score
+                best.P.name = body.name
+                best.P.delta_v = delta_v
+                best.P.water_level = water_level
             end
-            if body.primary_resource == "se-cryonite" and body.tags.temperature == "temperature_frozen" then
-                local E_score = score["se-holmium-ore"]
-                E_score = math.min(E_score, math.pow(857 / 1899, secondary_exponent) * score["crude-oil"])
-                -- TODO: boost copper for blue chips etc.?
-                E_score = math.min(E_score, math.pow(857 /   49, secondary_exponent) * score["copper-ore"])
-                E_score = math.min(E_score, math.pow(857 /   39, secondary_exponent) * score["coal"])
-                E_score = base_score * E_score / 0.857
-                if E_score > best.E.score then
-                    best.E.score = E_score
-                    best.E.name = body.name
-                    best.E.delta_v = delta_v
-                end
+        end
+
+        if body.primary_resource == "se-cryonite" and body.tags.temperature == "temperature_frozen" then
+            local U_score = base_score * score["crude-oil"]
+            if U_score > best.U.score then
+                best.U.score = U_score
+                best.U.name = body.name
+                best.U.delta_v = delta_v
+                best.U.water_level = water_level
             end
-            if true then
-                local A_score = score["se-beryllium-ore"]
-                A_score = math.min(A_score, math.pow(998 / 842, secondary_exponent) * score["crude-oil"])
-                A_score = base_score * A_score / 0.998
-                -- TODO: associate with cryo/iron?
-                if A_score > best.A.score then
-                    best.A.score = A_score
-                    best.A.name = body.name
-                    best.A.delta_v = delta_v
-                end
+        end
+
+        if body.primary_resource == "se-vitamelange" and body.tags.temperature == "temperature_bland" then
+            local B_score = base_score * score["stone"]
+            if B_score > best.B.score then
+                best.B.score = B_score
+                best.B.name = body.name
+                best.B.delta_v = delta_v
+                best.B.water_level = water_level
             end
-            if body.primary_resource == "se-vulcanite" and body.tags.temperature == "temperature_volcanic" then
-                local M_score = score["se-iridium-ore"]
-                M_score = math.min(M_score, math.pow(733 / 1527, secondary_exponent) * score["crude-oil"])
-                M_score = math.min(M_score, math.pow(733 /   22, secondary_exponent) * score["coal"])
-                M_score = base_score * M_score / 0.733
-                if M_score > best.M.score then
-                    best.M.score = M_score
-                    best.M.name = body.name
-                    best.M.delta_v = delta_v
-                end
+        end
+
+        if body.primary_resource == "se-holmium-ore" then
+            local E_score = base_score * score["crude-oil"]
+            if E_score > best.E.score then
+                best.E.score = E_score
+                best.E.name = body.name
+                best.E.delta_v = delta_v
+                best.E.water_level = water_level
+            end
+        end
+
+        if body.primary_resource == "se-beryllium-ore" then
+            local A_score = base_score * score["crude-oil"]
+            if A_score > best.A.score then
+                best.A.score = A_score
+                best.A.name = body.name
+                best.A.delta_v = delta_v
+                best.A.water_level = water_level
+            end
+        end
+
+        if body.primary_resource == "se-iridium-ore" then
+            local M_score = base_score * score["crude-oil"]
+            if M_score > best.M.score then
+                best.M.score = M_score
+                best.M.name = body.name
+                best.M.delta_v = delta_v
+                best.M.water_level = water_level
             end
         end
     end
 
     for _, field in pairs(asteroid_fields) do
-        local delta_v = Zone.get_travel_delta_v(nauvis, field)
-        if delta_v <= 20000 then
-            local base_score = math.pow((6E2) / (1E4 + delta_v), 1.0)
-            local secondary_exponent = 0.5
-            if field.primary_resource == "se-naquium-ore" then
-                local score = {}
-                for _, resource in pairs({"coal","copper-ore", "crude-oil", "iron-ore", "se-beryllium-ore", "se-cryonite", "se-holmium-ore", "se-iridium-ore", "se-methane-ice", "se-naquium-ore", "se-vitamelange", "se-vulcanite", "se-water-ice", "stone", "uranium-ore"}) do
-                    local control = field.controls[resource]
-                    -- Prioritize frequency for better logistics.
-                    frequency_weight = 4
-                    richness_weight = 1
-                    size_weight = 1
-                    total_weight = frequency_weight + richness_weight + size_weight
-                    score[resource] = math.pow(math.pow(control.frequency, frequency_weight) * math.pow(control.richness, richness_weight) * math.pow(control.size, size_weight), 3.0 / total_weight)
-                end
+        local score = {}
+        for _, resource in pairs(resources) do
+            local control = field.controls[resource]
+            score[resource] = control.frequency * control.richness * control.size
+        end
+        local primary_score = score[field.primary_resource]
+        for _, resource in pairs(resources) do
+            score[resource] = score[resource] / primary_score
+        end
 
-                local D_score = score["se-naquium-ore"]
-                D_score = math.min(D_score, math.pow(1000 / 333, secondary_exponent) * score["se-methane-ice"])
-                D_score = math.min(D_score, math.pow(1000 /  87, secondary_exponent) * score["se-water-ice"])
-                D_score = math.min(D_score, math.pow(1000 /  40, secondary_exponent) * score["iron-ore"])
-                -- 1 T4 pack = 444 naq (at T0 prod)
-                D_score = base_score * D_score / 0.444
-                if D_score > best.D.score then
-                    best.D.score = D_score
-                    best.D.name = field.name
-                    best.D.delta_v = delta_v
-                end
+        local closest_star = { delta_v = 1/0, name = nil }
+        for _, star in ipairs(stars) do
+            local delta_v = Zone.get_travel_delta_v(field, star)
+            if delta_v < closest_star.delta_v then
+                closest_star.delta_v = delta_v
+                closest_star.name = star.name
+            end
+        end
+
+        local base_score = 7.0 * (20000 / Zone.get_travel_delta_v(field, nauvis))
+        if field.primary_resource == "se-naquium-ore" then
+            local D_score = base_score * score["se-methane-ice"]
+            if D_score > best.D.score then
+                best.D.score = D_score
+                best.D.name = field.name
+                best.D.delta_v = delta_v
             end
         end
     end
 
+    local P_weight = 1.0
+    local U_weight = 1.0
+    local B_weight = 1.0
+    local E_weight = 1.0
+    local A_weight = 1.0
+    local M_weight = 1.0
+    local D_weight = 1.0
+    local total_weight = P_weight + U_weight + B_weight + E_weight + A_weight + M_weight + D_weight
     local score_exponent = -4.0
-    local final_score = math.pow(0.2 * (
-        math.pow(best.B.score, score_exponent) + math.pow(best.E.score, score_exponent) +
-        math.pow(best.A.score, score_exponent) + math.pow(best.M.score, score_exponent) +
-        math.pow(best.D.score, score_exponent)), 1.0 / score_exponent)
+    local final_score = math.pow((
+        P_weight * math.pow(best.P.score, score_exponent) +
+        U_weight * math.pow(best.U.score, score_exponent) +
+        B_weight * math.pow(best.B.score, score_exponent) +
+        E_weight * math.pow(best.E.score, score_exponent) +
+        A_weight * math.pow(best.A.score, score_exponent) +
+        M_weight * math.pow(best.M.score, score_exponent) +
+        D_weight * math.pow(best.D.score, score_exponent) +
+        0) / total_weight, 1.0 / score_exponent)
 
     if final_score > 0.0 then
         report_file:write(string.format('%10d %7.4f ', seed, final_score))
-        report_file:write(string.format('B[%11s] (%4.2f) ', best.B.name, best.B.score))
-        report_file:write(string.format('E[%11s] (%4.2f) ', best.E.name, best.E.score))
-        report_file:write(string.format('A[%11s] (%4.2f) ', best.A.name, best.A.score))
-        report_file:write(string.format('M[%11s] (%4.2f) ', best.M.name, best.M.score))
-        report_file:write(string.format('D[%16s] (%4.2f) {v7}\n', best.D.name, best.D.score))
+        report_file:write(string.format('P[%11s] (%5.3f %1s) ', best.P.name, best.P.score, best.P.water_level))
+        report_file:write(string.format('U[%11s] (%5.3f %1s) ', best.U.name, best.U.score, best.U.water_level))
+        report_file:write(string.format('B[%11s] (%5.3f %1s) ', best.B.name, best.B.score, best.B.water_level))
+        report_file:write(string.format('E[%11s] (%5.3f %1s) ', best.E.name, best.E.score, best.E.water_level))
+        report_file:write(string.format('A[%11s] (%5.3f %1s) ', best.A.name, best.A.score, best.A.water_level))
+        report_file:write(string.format('M[%11s] (%5.3f %1s) ', best.M.name, best.M.score, best.M.water_level))
+        report_file:write(string.format('D[%16s] (%5.3f) ', best.D.name, best.D.score))
+        report_file:write(string.format('{v10}\n'))
         report_file:flush()
     end
 end
