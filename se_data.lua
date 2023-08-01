@@ -1,5 +1,7 @@
 local se_data = {}
 
+local se_env = require('se_env')
+
 local function invert_table(t)
     local r = {}
     for k, v in pairs(t) do

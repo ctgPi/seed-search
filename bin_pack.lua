@@ -42,6 +42,10 @@ local function pack_zone_summary(summary)
     local secondary_resource_packed_scores = {}
     for i, name in ipairs(se_data.RESOURCE) do
         local score = summary.resource[se_data.RESOURCE[i]]
+        -- XXX: apparently it is possible, but rare, for asteroid fields to not spawn all resources? Add a dummy score just to keep binary compatibility.
+        if summary.zone_type == "asteroid-field" and bit32.band(0x702e, bit32.lshift(1, i-1)) ~= 0 then
+            score = 1e-10
+        end
         if score ~= nil then
             if score == 1 then
                 resource_mask = bit32.bor(resource_mask, bit32.lshift(1, i-1))

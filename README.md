@@ -7,6 +7,10 @@
 Reach out to @ctgPi in the [SE Discord](https://discord.gg/GDvxHgXjkk) so you can be assigned a range of chunks
 to work on.
 
+# Uncompressing binary universe files
+
+    ./unpack.lua < output/universe-xxxx.txt > output/universe-xxx.txt
+
 # Design rationale
 
 **TODO**: clean up, this is a chat dump from SE Discord.

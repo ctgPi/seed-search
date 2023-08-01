@@ -5,7 +5,11 @@ local worker_count = math.max(1, math.min(128, env.processor_count() - 1))
 
 local queue = {}
 for chunk = 0, 65535 do
-    table.insert(queue, "bin\\lua.exe worker.lua " .. tostring(chunk))
+    if env.operating_system() == "win32" then
+        table.insert(queue, "bin\\lua.exe generate.lua " .. tostring(chunk))
+    else
+        table.insert(queue, "lua5.2 generate.lua " .. tostring(chunk))
+    end
 end
 
 local active = {}
