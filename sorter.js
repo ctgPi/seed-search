@@ -1,6 +1,4 @@
 const fs = require("fs");
-const childProcess = require("child_process");
-const events = require("events");
 const readline = require("readline");
 
 const desiredResources = [
@@ -115,40 +113,3 @@ rl.on("line", (line) => {
 rl.once("close", () => {
   // end of input
 });
-
-// async function processLineByLine(folder, filename) {
-//   try {
-//     const rl = readline.createInterface({
-//       input: fs.createReadStream(folder + filename),
-//       crlfDelay: Infinity,
-//     });
-
-//     rl.on("line", (line) => {
-//       let seedObject = JSON.parse(line);
-//       if (score(seedObject)) {
-//         // fs.appendFileSync("./filtered/" + filename, line + "\n");
-//       }
-//     });
-//     // Wait for close promise
-//     await events.once(rl, "close");
-//     console.log("Reading file line by line with readline done.");
-//     const used = process.memoryUsage().heapUsed / 1024 / 1024;
-//     console.log(
-//       `The script uses approximately ${Math.round(used * 100) / 100} MB`
-//     );
-//   } catch (err) {
-//     console.error(err);
-//   }
-// }
-
-// async function script() {
-//   const folder = "./computed/";
-//   let folderFiles = fs.readdirSync(folder).filter((x) => {
-//     return x.includes(".jsonl");
-//   });
-//   for (let i = 0; i < folderFiles.length; i++) {
-//     processLineByLine(folder, folderFiles[i]);
-//   }
-// }
-
-// script();
