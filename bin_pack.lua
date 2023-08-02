@@ -46,6 +46,10 @@ local function pack_zone_summary(summary)
         if summary.zone_type == "asteroid-field" and bit32.band(0x702e, bit32.lshift(1, i-1)) ~= 0 then
             score = 1e-10
         end
+        -- XXX: apparently it is possible, but rare, for planets/moons to not spawn all resources? Add a dummy score just to keep binary compatibility.
+        if summary.zone_type ~= "asteroid-field" and bit32.band(0x003f, bit32.lshift(1, i-1)) ~= 0 then
+            score = 1e-10
+        end
         if score ~= nil then
             if score == 1 then
                 resource_mask = bit32.bor(resource_mask, bit32.lshift(1, i-1))
