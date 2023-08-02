@@ -7,6 +7,17 @@
 Reach out to @ctgPi in the [SE Discord](https://discord.gg/GDvxHgXjkk) so you can be assigned a range of chunks
 to work on.
 
+## Linux (Ubuntu 22.04)
+
+    sudo snap install --classic go
+    go install github.com/brentp/gargs@latest
+    mkdir -p $HOME/.local/bin
+    ln -nsf $HOME/go/bin/gargs $HOME/.local/bin
+    echo 'export PATH="$PATH:$HOME/.local/bin"' >> $HOME/.bashrc
+    export PATH="$PATH:$HOME/.local/bin"
+
+    ./run-search.sh
+
 # Uncompressing binary universe files
 
     ./unpack.lua < output/universe-xxxx.txt > output/universe-xxx.txt
