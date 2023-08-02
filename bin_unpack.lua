@@ -1,5 +1,6 @@
 local bin_unpack = {}
 
+local bit32 = require("bit32")
 local bit32_extra = require('bit32_extra')
 local struct = require('struct')
 local se_data = require('se_data')
@@ -11,16 +12,15 @@ local function unpack_secondary_score(v)
     return math.pow(x, 3) / 7
 end
 
-
 local function unpack_trits(r)
     assert(1 <= r and r <= 243)
 
-    local t1 = 1 + math.floor((r-1)     ) % 3
-    local t2 = 1 + math.floor((r-1) /  3) % 3
-    local t3 = 1 + math.floor((r-1) /  9) % 3
-    local t4 = 1 + math.floor((r-1) / 27) % 3
-    local t5 = 1 + math.floor((r-1) / 81) % 3
-    
+    local t1 = 1 + math.floor((r - 1)) % 3
+    local t2 = 1 + math.floor((r - 1) / 3) % 3
+    local t3 = 1 + math.floor((r - 1) / 9) % 3
+    local t4 = 1 + math.floor((r - 1) / 27) % 3
+    local t5 = 1 + math.floor((r - 1) / 81) % 3
+
     assert(1 <= t1 and t1 <= 3)
     assert(1 <= t2 and t2 <= 3)
     assert(1 <= t3 and t3 <= 3)
@@ -32,10 +32,10 @@ end
 local function unpack_quints(r)
     assert(1 <= r and r <= 125)
 
-    local q1 = 1 + math.floor((r-1)     ) % 5
-    local q2 = 1 + math.floor((r-1) /  5) % 5
-    local q3 = 1 + math.floor((r-1) / 25) % 5
-    
+    local q1 = 1 + math.floor((r - 1)) % 5
+    local q2 = 1 + math.floor((r - 1) / 5) % 5
+    local q3 = 1 + math.floor((r - 1) / 25) % 5
+
     assert(1 <= q1 and q1 <= 5)
     assert(1 <= q2 and q2 <= 5)
     assert(1 <= q3 and q3 <= 5)
@@ -66,7 +66,7 @@ local function unpack_zone_summary(reader)
     elseif t_zone_type == 1 or t_zone_type == 2 then
         resource_mask = 0x003f
         local t_resource_mask = bit32.band(bit32.rshift(w0, 16), 0x00000003)
-        resource_mask = bit32.bor(resource_mask, bit32.pdep(t_resource_mask, 0x00c0))
+        resource_mask = bit32.bor(resource_mask, bit32_extra.pdep(t_resource_mask, 0x00c0))
 
         local t_q1 = bit32.band(bit32.rshift(w0, 18), 0x0000007f)
         local t_t2_resource, t_water, t_moisture = unpack_quints(t_q1)
@@ -98,7 +98,7 @@ local function unpack_zone_summary(reader)
     zone_summary.resource[se_data.RESOURCE[primary_resource_index]] = 1
     for i, name in ipairs(se_data.RESOURCE) do
         if i ~= primary_resource_index then
-            if bit32.band(resource_mask, bit32.lshift(1, i-1)) ~= 0 then
+            if bit32.band(resource_mask, bit32.lshift(1, i - 1)) ~= 0 then
                 local s = struct.unpack("<B", reader:read(1))
                 zone_summary.resource[se_data.RESOURCE[i]] = unpack_secondary_score(s)
             end
@@ -108,11 +108,13 @@ local function unpack_zone_summary(reader)
     return zone_summary
 end
 
-function bin_unpack.unpack_seeds(input_file)
+function bin_unpack.unpack_seeds(filename)
+    print("Unpacking " .. filename)
+    local input_file = io.open(filename, "r")
     local reader = {
         file = input_file,
         buffer = {},
-        read = function (self, n)
+        read = function(self, n)
             local r = {}
             while #self.buffer > 0 and n > 0 do
                 table.insert(r, table.remove(self.buffer))
@@ -130,11 +132,11 @@ function bin_unpack.unpack_seeds(input_file)
             end
             return table.concat(r)
         end,
-        unread = function (self, s)
+        unread = function(self, s)
             for i = 1, string.len(s) do
                 table.insert(self.buffer, string.sub(s, i, i))
             end
-        end,
+        end
     }
 
     local function iterator(reader, previous_seed_summary)

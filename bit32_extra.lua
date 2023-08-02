@@ -1,6 +1,7 @@
+local bit32 = require("bit32")
 local bit32_extra = {}
 
-function bit32.pext(x, m)
+function bit32_extra.pext(x, m)
     local r = 0
     local c = 0
     for i = 0, 31 do
@@ -14,7 +15,7 @@ function bit32.pext(x, m)
     return r
 end
 
-function bit32.pdep(x, m)
+function bit32_extra.pdep(x, m)
     local r = 0
     local c = 0
     for i = 0, 31 do
