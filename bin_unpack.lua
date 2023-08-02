@@ -109,7 +109,6 @@ local function unpack_zone_summary(reader)
 end
 
 function bin_unpack.unpack_seeds(filename)
-    print("Unpacking " .. filename)
     local input_file = io.open(filename, "r")
     local reader = {
         file = input_file,
