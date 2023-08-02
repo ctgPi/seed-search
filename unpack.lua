@@ -6,6 +6,9 @@ local se_env = require('se_env')
 local bin_unpack = require('bin_unpack')
 local json = require('json')
 
-for summary in bin_unpack.unpack_seeds(io.stdin) do
+local input_file = io.open(arg[1], "r+b")
+assert(input_file)
+for summary in bin_unpack.unpack_seeds(input_file) do
     print(json.encode(summary))
 end
+input_file:close()
