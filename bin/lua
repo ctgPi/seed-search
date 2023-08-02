@@ -1,1 +1,3 @@
-lua-linux-x86-64
+#!/bin/bash
+
+"$(dirname "${BASH_SOURCE[0]}")/lua-linux-$(uname -m)" "$@"
