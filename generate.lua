@@ -12,7 +12,7 @@ local chunk = tonumber(arg[1])
 local chunk_size = math.pow(2, 16)
 
 local start_seed = math.max(340, chunk * chunk_size)
-local end_seed = start_seed + chunk_size - 2
+local end_seed = (chunk + 1) * chunk_size - 2
 
 report_file_name = env.join_path('output', string.format('universe-%04x.bin', chunk))
 
