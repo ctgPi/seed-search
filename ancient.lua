@@ -1,5 +1,3 @@
-#!/usr/bin/env lua5.2
-
 serpent = {}
 serpent.block = function () return "" end
 serpent = dofile('./serpent.lua')

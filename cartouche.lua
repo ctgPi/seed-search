@@ -1,5 +1,3 @@
-#!/usr/bin/env lua5.2
-
 local base64 = dofile('base64.lua')
 local zip = require('zip')
 local libav = require('libav')

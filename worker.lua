@@ -1,5 +1,3 @@
-#!/usr/bin/env lua5.2
-
 local zip = require('zip')
 local env = require('env')
 

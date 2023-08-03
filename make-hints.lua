@@ -1,5 +1,3 @@
-#!/usr/bin/env lua5.2
-
 for chunk = 0, 65535 do
     report_file_name = string.format('output/report-%04x.txt', chunk)
     hint_file_name = string.format('output/report-%04x.hint', chunk)

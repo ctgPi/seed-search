@@ -1,5 +1,3 @@
-#!/usr/bin/env lua5.2
-
 local env = require('env')
 local struct = require('struct')
 
