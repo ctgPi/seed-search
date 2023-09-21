@@ -470,7 +470,7 @@ settings.startup = {}
 settings.startup["se-spawn-small-resources"] = { value = false }  -- FIXME
 
 local MOD_NAME = 'space-exploration'
-local MOD_VERSION = '0.6.111'
+local MOD_VERSION = '0.6.114'
 local MOD_TAG = MOD_NAME .. '_' .. MOD_VERSION
 
 local FACTORIO_HOME

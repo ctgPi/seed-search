@@ -44,14 +44,10 @@ se_data.T_ENEMY = Universe.enemy_tags
 se_data.T_ENEMY_index = invert_table(se_data.T_ENEMY)
 
 se_data.NAME = {}
-do
-    local name_file = io.open('NAMES.txt', 'r')
-    assert(name_file)
-    for name in name_file:lines("*l") do
-        table.insert(se_data.NAME, name)
-    end
-    name_file:close()
+for name, _ in pairs(UniverseRaw.prototypes_by_name) do
+    table.insert(se_data.NAME, name)
 end
+table.sort(se_data.NAME, function (this, that) return this < that end)
 se_data.NAME_index = invert_table(se_data.NAME)
 
 return se_data
