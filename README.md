@@ -1,15 +1,15 @@
 # Running the seed finder
 
+Reach out to @ctgPi in the [SE Discord](https://discord.gg/GDvxHgXjkk) so you can be assigned a range of chunks
+to work on.
+
 ## Windows
 
     run.bat
 
-Reach out to @ctgPi in the [SE Discord](https://discord.gg/GDvxHgXjkk) so you can be assigned a range of chunks
-to work on.
+## Linux
 
-## Linux (Ubuntu 22.04)
-
-    bin/lua ./manager.lua
+    ./run.sh
 
 # Uncompressing binary universe files
 
