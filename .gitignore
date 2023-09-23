@@ -5,3 +5,5 @@ mods/*.zip
 *.dll.obj
 *.pdb
 *.lib
+_config.json
+_queue.json

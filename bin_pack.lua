@@ -136,18 +136,18 @@ local function pack_zone_summary(summary)
     end
 end
 
-local last_seed = nil  -- TODO: probably not good to keep this in global state...
+bin_pack.last_seed = nil  -- TODO: probably not good to keep this in global state...
 function bin_pack.pack_seed_summary(summary)
     local r = {}
 
     local c = math.ceil(math.min(60, #summary.planets) / 5)
     local t_seed
-    if last_seed == nil or last_seed + 2 ~= summary.seed then
+    if bin_pack.last_seed == nil or bin_pack.last_seed + 2 ~= summary.seed then
         t_seed = 1
     else
         t_seed = 2
     end
-    last_seed = summary.seed
+    bin_pack.last_seed = summary.seed
 
     local w0 = 0
     w0 = bit32.bor(w0, bit32.lshift(0, 0))  -- 0~1
@@ -163,15 +163,14 @@ function bin_pack.pack_seed_summary(summary)
             local p = i + (j-1) * 5
             local loot = summary.loot[p]
             local t_loot
-            if loot == "P" then
+            if loot == nil then
+                t_loot = 1  -- undefined
+            elseif loot == "P" then
                 t_loot = 1
             elseif loot == "S" then
                 t_loot = 2
             elseif loot == "E" then
                 t_loot = 3
-            elseif loot == nil then
-                -- undefined value
-                t_loot = math.floor(1 + 3 * math.random())
             else
                 assert(false)
             end
